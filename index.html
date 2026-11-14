@@ -1,12 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sky Escape - Giriş</title>
+  <meta name="referrer" content="no-referrer">
+  <title>Sky Escape · Google Giriş Testi</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}
+    body{background:linear-gradient(150deg,#0a1634,#173b68);min-height:100vh;margin:0;display:grid;place-items:center;color:#fff}
+    main{width:min(420px,calc(100% - 48px));padding:30px 24px;background:#14254a;border:1px solid #d5ad66;border-radius:20px;text-align:center;box-shadow:0 18px 50px #0005}
+    h1{color:#f5d48c;letter-spacing:2px}button{background:#f2d48b;color:#182345;border:0;border-radius:10px;padding:14px 18px;font-size:16px;font-weight:700;cursor:pointer;width:100%;margin:8px 0}button:disabled{opacity:.5;cursor:wait}
+    p{line-height:1.6}#status{color:#c9d8ef}small{color:#a9bfdc}#account{overflow-wrap:anywhere}
+  </style>
 </head>
 <body>
-  <h1>Sky Escape</h1>
-  <p>Giriş sayfası hazır!</p>
+<main>
+  <h1>✦ SKY ESCAPE ✦</h1>
+  <p>Google hesabıyla giriş testi</p>
+  <button id="login" type="button" disabled>Google ile giriş yap</button>
+  <button id="logout" type="button" hidden>Çıkış yap</button>
+  <p id="status" role="status">Giriş sistemi hazırlanıyor…</p>
+  <p id="account"></p>
+  <small>Bu sayfa yalnızca Google–Supabase girişini doğrular. Godot oyununa oturum aktarımı henüz etkin değildir.</small>
+</main>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/+esm';
+  const SUPABASE_URL = 'https://rlhzlxgysteubpjaksuk.supabase.co';
+  // Public/publishable key only. Never put a service_role key or OAuth client secret here.
+  const SUPABASE_ANON_KEY = 'sb_publishable_wtyRI2jbCE9KDr5to94Bsg_myfg28NL';
+  const redirectTo = 'https://ottili06.github.io/sky-escape-auth/';
+  const status = document.querySelector('#status');
+  const account = document.querySelector('#account');
+  const login = document.querySelector('#login');
+  const logout = document.querySelector('#logout');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true }
+  });
+  function render(session) {
+    const user = session?.user;
+    login.hidden = !!user;
+    logout.hidden = !user;
+    account.textContent = user ? 'Google profil adı: ' + (user.user_metadata?.full_name || user.user_metadata?.name || 'Ad belirtilmemiş') : '';
+    status.textContent = user ? 'Google girişi doğrulandı ✓ (oyuna henüz bağlanmadı)' : 'Giriş yapmak için butona bas.';
+  }
+  login.addEventListener('click', async () => {
+    login.disabled = true;
+    status.textContent = 'Google giriş sayfasına yönlendiriliyor…';
+    const { error } = await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo}});
+    if (error) { status.textContent = 'Giriş başlatılamadı: ' + error.message; login.disabled = false; }
+  });
+  logout.addEventListener('click', async () => {
+    const {error} = await supabase.auth.signOut();
+    if (error) status.textContent = 'Çıkış hatası: ' + error.message;
+    else render(null);
+  });
+  supabase.auth.onAuthStateChange((_event,session) => render(session));
+  const { data, error } = await supabase.auth.getSession();
+  if (error) status.textContent = 'Oturum kontrol hatası: ' + error.message;
+  else render(data.session);
+  login.disabled = false;
+</script>
 </body>
 </html>
